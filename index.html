@@ -16,7 +16,7 @@
   <!-- Element pentru afișarea link-ului de invitație -->
   <div id="invitationLinkContainer">
     <p>Link-ul tău de invitație este:</p>
-    <input type="text" width="100%" id="invitationLink" readonly>
+    <!-- <input type="text" width="100%" id="invitationLink" readonly>-->
   </div>
 
   <script>
@@ -66,9 +66,9 @@
     }
 
     function createInvitationLink(peerId) {
-      const invitationLinkElement = document.getElementById('invitationLink');
-      invitationLinkElement.value = window.location.origin + '/?peer_id=' + peerId;
-
+      //const invitationLinkElement = document.getElementById('invitationLink');
+      //invitationLinkElement.value = window.location.origin + '/?peer_id=' + peerId;
+      alert(window.location.origin + '/?peer_id=' + peerId);
       //window.history.pushState({}, '', '?peer_id=' + peerId);
     }
 
