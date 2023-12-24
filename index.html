@@ -35,14 +35,24 @@
       if (peerIdParam && id !== peerIdParam) {
         console.log('Joining existing session with peer ID: ' + peerIdParam);
 
-        // Inițiați un apel către peer-ul local
-        const call = peer.call(peerIdParam, null);
+        // Verificați dacă există o conexiune către peer-ul specificat
+        if (peer.connections[peerIdParam] && peer.connections[peerIdParam].length > 0) {
+          // Inițiați un apel către peer-ul local
+          const call = peer.call(peerIdParam, null);
 
-        // Răspundeți la evenimentul 'stream' pentru a afișa stream-ul remote
-        call.on('stream', (remoteStream) => {
-          remoteVideo.srcObject = remoteStream;
-          remoteAudio.srcObject = remoteStream;
-        });
+          // Verificați dacă apelul este definit înainte de a adăuga un handler pentru evenimentul 'stream'
+          if (call) {
+            // Răspundeți la evenimentul 'stream' pentru a afișa stream-ul remote
+            call.on('stream', (remoteStream) => {
+              remoteVideo.srcObject = remoteStream;
+              remoteAudio.srcObject = remoteStream;
+            });
+          } else {
+            console.error('Call is not defined.');
+          }
+        } else {
+          console.error('No existing connection to the specified peer ID.');
+        }
       } else {
         console.log('Starting a new session');
         // Altfel, inițiem o nouă sesiune.
