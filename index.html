@@ -5,7 +5,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Video Chat</title>
-  <script src="https://cdn.jsdelivr.net/npm/peerjs@0.6.0/dist/peerjs.min.js"></script>
 </head>
 <body>
   <h1>Video Chat</h1>
@@ -14,63 +13,35 @@
   <video id="remoteVideo" autoplay playsinline></video>
   <audio id="remoteAudio" autoplay></audio>
   <script>
-    const peer = new Peer(); // Generează un ID aleatoriu
-    const localVideo = document.getElementById('localVideo');
-    const localAudio = document.getElementById('localAudio');
-    const remoteVideo = document.getElementById('remoteVideo');
-    const remoteAudio = document.getElementById('remoteAudio');
+    const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+    const peerConnection = new RTCPeerConnection(configuration);
     let localStream;
-    let peerConnection;
 
-    // Obține acces la camera web și microfon
     navigator.mediaDevices.getUserMedia({ video: true, audio: true })
       .then(stream => {
-        localVideo.srcObject = stream;
-        localAudio.srcObject = stream;
         localStream = stream;
-
-        // Inițiază conexiunea când stream-ul local este disponibil
-        initConnection();
+        document.getElementById('localVideo').srcObject = stream;
+        document.getElementById('localAudio').srcObject = stream;
       })
       .catch(error => console.error('Eroare la accesarea dispozitivelor media:', error));
 
-    function initConnection() {
-      // Configurare conexiune peer-to-peer folosind WebRTC
-      peer.on('open', id => {
-        console.log('ID-ul PeerJS generat:', id);
+    // Adăugăm track-urile la conexiunea peer-to-peer
+    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-        // Ascultă pentru apeluri de la alți peeri
-        peer.on('call', call => {
-          // Răspunde apelului și adaugă stream-ul local
-          call.answer(localStream);
-          handleCall(call);
-        });
-
-        // Ascultă pentru tastarea unei chei pentru a iniția un apel
-        document.addEventListener('keydown', event => {
-          if (event.key === 'c') {
-            // Apelează un alt peer și adaugă stream-ul local
-            const destPeerId = prompt('Introdu ID-ul PeerJS destinatar:');
-            const call = peer.call(destPeerId, localStream);
-            handleCall(call);
-          }
-        });
-      });
-    }
-
-    function handleCall(call) {
-      call.on('stream', remoteStream => {
-        remoteVideo.srcObject = remoteStream;
-        remoteAudio.srcObject = remoteStream;
-      });
-      // Gestionarea evenimentelor pentru închiderea apelului, erori, etc., poate fi adăugată aici
-    }
-
-    // Verificare pentru erori în consolă
-    window.onerror = function(message, source, lineno, colno, error) {
-      console.error('Eroare în consolă:', message, source, lineno, colno, error);
-      return true; // Previne afișarea erorii în consolă browser-ului
+    // Ascultăm pentru evenimentul de primire a stream-ului de la celălalt peer
+    peerConnection.ontrack = event => {
+      document.getElementById('remoteVideo').srcObject = event.streams[0];
+      document.getElementById('remoteAudio').srcObject = event.streams[0];
     };
+
+    // Creăm și trimitem oferta către celălalt peer
+    peerConnection.createOffer()
+      .then(offer => peerConnection.setLocalDescription(offer))
+      .then(() => {
+        // Aici poți trimite oferta la celălalt peer, prin intermediul unui server de semnalizare sau altă metodă
+        console.log('Oferta:', peerConnection.localDescription);
+      })
+      .catch(error => console.error('Eroare la crearea ofertei:', error));
   </script>
 </body>
 </html>
