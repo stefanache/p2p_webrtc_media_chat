@@ -4,88 +4,39 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Media(Video+Audio) Chat</title>
-  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+  <title>Media Chat</title>
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.3.2/dist/peerjs.min.js"></script>
 </head>
 <body>
-  <h1>Media(Audio+Video) Chat</h1>
-  <table>
-    <tr>
-      <td>
+  <h1>Media Chat</h1>
   <video id="localVideo" autoplay playsinline muted></video>
   <audio id="localAudio" autoplay muted></audio>
-        </td><td>
   <video id="remoteVideo" autoplay playsinline></video>
   <audio id="remoteAudio" autoplay></audio>
-          </td>
-      </tr>
-    </table>
   <script>
     const localVideo = document.getElementById('localVideo');
     const localAudio = document.getElementById('localAudio');
     const remoteVideo = document.getElementById('remoteVideo');
     const remoteAudio = document.getElementById('remoteAudio');
-    const socket = io('https://socket-io-chat-server.herokuapp.com/');
 
-    let localStream;
-    let peerConnection;
+    const peer = new Peer();
 
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then(stream => {
-        localVideo.srcObject = stream;
-        localAudio.srcObject = stream;
-        localStream = stream;
-      })
-      .catch(error => console.error('Error accessing media devices:', error));
+    peer.on('open', (id) => {
+      console.log('My peer ID is: ' + id);
 
-    initConnection();
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then(stream => {
+          localVideo.srcObject = stream;
+          localAudio.srcObject = stream;
 
-    function initConnection() {
-      peerConnection = new RTCPeerConnection();
-
-      localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-      peerConnection.ontrack = event => {
-        const [videoTrack, audioTrack] = event.streams[0].getTracks();
-        if (videoTrack) {
-          remoteVideo.srcObject = new MediaStream([videoTrack]);
-        }
-        if (audioTrack) {
-          remoteAudio.srcObject = new MediaStream([audioTrack]);
-        }
-      };
-
-      peerConnection.createOffer()
-        .then(offer => peerConnection.setLocalDescription(offer))
-        .then(() => {
-          socket.emit('offer', peerConnection.localDescription);
+          const call = peer.call('remote-peer-id', stream);
+          call.on('stream', (remoteStream) => {
+            remoteVideo.srcObject = remoteStream;
+            remoteAudio.srcObject = remoteStream;
+          });
         })
-        .catch(error => console.error('Error creating offer:', error));
-
-      socket.on('offer', offer => {
-        if (!offer.sdp.includes(peerConnection.localDescription.sdp)) {
-          peerConnection.setRemoteDescription(offer)
-            .then(() => peerConnection.createAnswer())
-            .then(answer => peerConnection.setLocalDescription(answer))
-            .then(() => {
-              socket.emit('answer', peerConnection.localDescription);
-            })
-            .catch(error => console.error('Error creating answer:', error));
-        }
-      });
-
-      socket.on('answer', answer => {
-        if (!answer.sdp.includes(peerConnection.localDescription.sdp)) {
-          peerConnection.setRemoteDescription(answer)
-            .catch(error => console.error('Error setting remote description:', error));
-        }
-      });
-
-      socket.on('candidate', candidate => {
-        peerConnection.addIceCandidate(candidate)
-          .catch(error => console.error('Error adding ice candidate:', error));
-      });
-    }
+        .catch(error => console.error('Error accessing media devices:', error));
+    });
   </script>
 </body>
 </html>
