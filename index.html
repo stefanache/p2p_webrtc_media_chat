@@ -14,7 +14,12 @@
   <audio id="localAudio" autoplay></audio>
   <video id="remoteVideo" autoplay playsinline></video>
   <audio id="remoteAudio" autoplay></audio>
-  <button onclick="joinChat()">Join</button>
+  
+  <!-- Element pentru afișarea link-ului de invitație -->
+  <div id="invitationLinkContainer">
+    <p>Link-ul tău de invitație este:</p>
+    <a id="invitationLink" href="#" target="_blank" rel="noopener noreferrer"></a>
+  </div>
 
   <script>
     const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
@@ -37,47 +42,6 @@
       document.getElementById('remoteAudio').srcObject = event.streams[0];
     };
 
-    // Funcția pentru alăturarea la un chat existent sau crearea unei sesiuni noi
-    async function joinChat() {
-      // Solicitarea unui ID de la utilizator
-      const userInput = prompt('Introdu ID-ul PeerJS destinatar (lasă gol pentru unul nou):');
-      const peerIdToJoin = userInput.trim();
-
-      if (peerIdToJoin === '') {
-        // Dacă utilizatorul nu a introdus un ID, creăm unul nou
-        localPeerId = await createPeer();
-        alert('Link-ul tău de invitație este: ' + window.location.origin + '/?peer_id=' + localPeerId);
-      } else {
-        // Dacă utilizatorul a introdus un ID, încercăm să ne alăturăm la sesiunea respectivă
-        localPeerId = peerIdToJoin;
-      }
-
-      // Conectarea la serverul de semnalizare
-      const socket = io('https://your-signaling-server.com');
-
-      // Ascultăm pentru evenimentul "connect" pentru a ne asigura că suntem conectați la server
-      socket.on('connect', () => {
-        // Transmiterea ofertei către celălalt peer
-        const offer = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offer);
-
-        socket.emit('offer', {
-          offer,
-          to: localPeerId, // Trimiterea ofertei către peer-ul specificat
-        });
-      });
-
-      // Ascultăm pentru evenimentul "answer" pentru a primi răspunsul de la celălalt peer
-      socket.on('answer', async answer => {
-        await peerConnection.setRemoteDescription(answer);
-      });
-
-      // Ascultăm pentru evenimentul "ice-candidate" pentru a primi candidații ICE de la celălalt peer
-      socket.on('ice-candidate', async candidate => {
-        await peerConnection.addIceCandidate(candidate);
-      });
-    }
-
     // Funcția pentru crearea unui nou peer și obținerea ID-ului său
     function createPeer() {
       return new Promise(resolve => {
@@ -85,6 +49,21 @@
         peer.on('open', id => resolve(id));
       });
     }
+
+    // Funcția pentru generarea link-ului de invitație
+    async function generateInvitationLink() {
+      // Crează un ID pentru utilizatorul local
+      localPeerId = await createPeer();
+
+      // Afișează link-ul de invitație în elementul de ancoră (link)
+      const invitationLink = window.location.origin + '/?peer_id=' + localPeerId;
+      const anchorElement = document.getElementById('invitationLink');
+      anchorElement.href = invitationLink;
+      anchorElement.textContent = invitationLink;
+    }
+
+    // Apelul funcției pentru generarea link-ului la încărcarea paginii
+    generateInvitationLink();
   </script>
 </body>
 </html>
