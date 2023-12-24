@@ -28,46 +28,53 @@
     const urlParams = new URLSearchParams(window.location.search);
     const peerIdParam = urlParams.get('peer_id');
 
-    function startChat() {
-      peer = new Peer();
+    function startChat(id) {
+      peerIdSpan.textContent = id;
 
-      peer.on('open', (id) => {
-        console.log('My peer ID is: ' + id);
-        peerIdSpan.textContent = id;
+      // Dacă există un peer ID furnizat ca parametru, atunci ne alăturăm unei sesiuni existente
+      if (peerIdParam && id !== peerIdParam) {
+        console.log('Joining existing session with peer ID: ' + peerIdParam);
 
-        // Dacă există un peer ID furnizat ca parametru, atunci ne alăturăm unei sesiuni existente
-        if (peerIdParam && peerId !== peerIdParam) {
-          console.log('Joining existing session with peer ID: ' + peerIdParam);
+        // Inițiați un apel către peer-ul local
+        const call = peer.call(peerIdParam, null);
 
-          // Inițiați un apel către peer-ul local
-          const call = peer.call(peerIdParam, null);
-
+        // Verificați dacă apelul este definit înainte de a adăuga un handler pentru evenimentul 'stream'
+        if (call) {
           // Răspundeți la evenimentul 'stream' pentru a afișa stream-ul remote
           call.on('stream', (remoteStream) => {
             remoteVideo.srcObject = remoteStream;
             remoteAudio.srcObject = remoteStream;
           });
         } else {
-          console.log('Starting a new session');
-          // Altfel, inițiem o nouă sesiune.
-          navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-            .then(stream => {
-              localVideo.srcObject = stream;
-              localAudio.srcObject = stream;
-
-              // Dacă suntem într-o sesiune existentă, nu afișăm link-ul de invitație
-              if (!peerIdParam) {
-                const invitationLink = window.location.origin + window.location.pathname + '?peer_id=' + id;
-                invitationLinkP.innerHTML = 'Invitați colegul să se alăture folosind link-ul: <a href="' + invitationLink + '">' + invitationLink + '</a>';
-              }
-            })
-            .catch(error => console.error('Error accessing media devices:', error));
+          console.error('Call is not defined.');
         }
-      });
+      } else {
+        console.log('Starting a new session');
+        // Altfel, inițiem o nouă sesiune.
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+          .then(stream => {
+            localVideo.srcObject = stream;
+            localAudio.srcObject = stream;
+
+            // Dacă suntem într-o sesiune existentă, nu afișăm link-ul de invitație
+            if (!peerIdParam) {
+              const invitationLink = window.location.origin + window.location.pathname + '?peer_id=' + id;
+              invitationLinkP.innerHTML = 'Invitați colegul să se alăture folosind link-ul: <a href="' + invitationLink + '">' + invitationLink + '</a>';
+            }
+          })
+          .catch(error => console.error('Error accessing media devices:', error));
+      }
     }
 
-    // Apelați funcția startChat când se încarcă pagina
-    window.onload = startChat;
+    // Inițializați obiectul Peer când documentul este complet încărcat
+    document.addEventListener('DOMContentLoaded', () => {
+      peer = new Peer();
+
+      // Ascultați evenimentul 'open' pentru a obține ID-ul peer-ului local
+      peer.on('open', (id) => {
+        startChat(id);
+      });
+    });
   </script>
 </body>
 </html>
