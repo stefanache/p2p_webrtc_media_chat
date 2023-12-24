@@ -38,8 +38,15 @@
         // Dacă există un peer ID furnizat ca parametru, atunci ne alăturăm unei sesiuni existente
         if (peerIdParam && peerId !== peerIdParam) {
           console.log('Joining existing session with peer ID: ' + peerIdParam);
-          // Colegul ar trebui să inițieze un apel către ID-ul furnizat.
-          // Exemplu: peer.call(peerIdParam, stream);
+
+          // Inițiați un apel către peer-ul local
+          const call = peer.call(peerIdParam, null);
+
+          // Răspundeți la evenimentul 'stream' pentru a afișa stream-ul remote
+          call.on('stream', (remoteStream) => {
+            remoteVideo.srcObject = remoteStream;
+            remoteAudio.srcObject = remoteStream;
+          });
         } else {
           console.log('Starting a new session');
           // Altfel, inițiem o nouă sesiune.
