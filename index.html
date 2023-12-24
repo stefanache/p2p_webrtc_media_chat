@@ -15,8 +15,8 @@
 
   <!-- Element pentru afișarea link-ului de invitație -->
   <div id="invitationLinkContainer">
-    <p>Link-ul tău de invitație este:</p>
-    <!-- <input type="text" width="100%" id="invitationLink" readonly>-->
+    <p>Link-ul tău de invitație este: https://stefanache.github.io/p2p_webrtc_media_chat/index.html?peer_id=
+    <input type="text" width="700px" id="invitationLink" readonly></p>
   </div>
 
   <script>
@@ -66,10 +66,8 @@
     }
 
     function createInvitationLink(peerId) {
-      //const invitationLinkElement = document.getElementById('invitationLink');
-      //invitationLinkElement.value = window.location.origin + '/?peer_id=' + peerId;
-      alert(window.location.origin + '/?peer_id=' + peerId);
-      //window.history.pushState({}, '', '?peer_id=' + peerId);
+      const invitationLinkElement = document.getElementById('invitationLink');
+      invitationLinkElement.value = ''+peerId;
     }
 
     initialize();
