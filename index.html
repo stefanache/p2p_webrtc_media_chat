@@ -9,10 +9,17 @@
 </head>
 <body>
   <h1>Media(Audio+Video) Chat</h1>
+  <table>
+    <tr>
+      <td>
   <video id="localVideo" autoplay playsinline muted></video>
   <audio id="localAudio" autoplay muted></audio>
+        </td><td>
   <video id="remoteVideo" autoplay playsinline></video>
   <audio id="remoteAudio" autoplay></audio>
+          </td>
+      </tr>
+    </table>
   <script>
     const localVideo = document.getElementById('localVideo');
     const localAudio = document.getElementById('localAudio');
