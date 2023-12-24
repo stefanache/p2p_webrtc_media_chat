@@ -61,7 +61,15 @@
 
     // Apelul funcției pentru generarea link-ului la încărcarea paginii
     generateInvitationLink();
+
+    // Obține peer_id din URL
+    const peerIdFromUrl = getPeerIdFromUrl();
+
+    // Dacă avem un peer_id în URL, putem trata logic acest caz
+    if (peerIdFromUrl) {
+      // Acum puteți utiliza peerIdFromUrl pentru a vă alătura unei sesiuni existente sau face alte lucruri
+      console.log('Sesiune existentă, peer_id:', peerIdFromUrl);
+    }
   </script>
 </body>
 </html>
-
