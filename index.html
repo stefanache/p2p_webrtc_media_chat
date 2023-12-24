@@ -4,10 +4,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Media Chat</title>
+  <title>Video Chat</title>
 </head>
 <body>
-  <h1>Media Chat</h1>
+  <h1>Video Chat</h1>
   <video id="localVideo" autoplay playsinline muted></video>
   <audio id="localAudio" autoplay></audio>
   <video id="remoteVideo" autoplay playsinline></video>
@@ -16,7 +16,7 @@
   <!-- Element pentru afișarea link-ului de invitație -->
   <div id="invitationLinkContainer">
     <p>Link-ul tău de invitație este:</p>
-    <a id="invitationLink" href="#" target="_blank" rel="noopener noreferrer"></a>
+    <input type="text" id="invitationLink" readonly>
   </div>
 
   <script>
@@ -66,10 +66,8 @@
     }
 
     function createInvitationLink(peerId) {
-      const invitationLink = window.location.origin + '/?peer_id=' + peerId;
-      const anchorElement = document.getElementById('invitationLink');
-      anchorElement.href = invitationLink;
-      anchorElement.textContent = invitationLink;
+      const invitationLinkElement = document.getElementById('invitationLink');
+      invitationLinkElement.value = window.location.origin + '/?peer_id=' + peerId;
 
       window.history.pushState({}, '', '?peer_id=' + peerId);
     }
