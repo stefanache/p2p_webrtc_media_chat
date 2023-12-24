@@ -4,11 +4,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Media Chat</title>
+  <title>Video Chat</title>
   <script src="https://cdn.jsdelivr.net/npm/peerjs@1.3.2/dist/peerjs.min.js"></script>
 </head>
 <body>
-  <h1>Media Chat</h1>
+  <h1>Video Chat</h1>
+  <p>Peer ID: <span id="peerId"></span></p>
+  <p id="invitationLink"></p>
   <video id="localVideo" autoplay playsinline muted></video>
   <audio id="localAudio" autoplay muted></audio>
   <video id="remoteVideo" autoplay playsinline></video>
@@ -18,25 +20,43 @@
     const localAudio = document.getElementById('localAudio');
     const remoteVideo = document.getElementById('remoteVideo');
     const remoteAudio = document.getElementById('remoteAudio');
+    const peerIdSpan = document.getElementById('peerId');
+    const invitationLinkP = document.getElementById('invitationLink');
+    let peer;
 
-    const peer = new Peer();
+    // Obțineți ID-ul din query string (ex: ?peer_id=123)
+    const urlParams = new URLSearchParams(window.location.search);
+    const peerIdParam = urlParams.get('peer_id');
 
-    peer.on('open', (id) => {
-      console.log('My peer ID is: ' + id);
+    function startChat() {
+      peer = new Peer();
 
-      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-        .then(stream => {
-          localVideo.srcObject = stream;
-          localAudio.srcObject = stream;
+      peer.on('open', (id) => {
+        console.log('My peer ID is: ' + id);
+        peerIdSpan.textContent = id;
 
-          const call = peer.call('remote-peer-id', stream);
-          call.on('stream', (remoteStream) => {
-            remoteVideo.srcObject = remoteStream;
-            remoteAudio.srcObject = remoteStream;
-          });
-        })
-        .catch(error => console.error('Error accessing media devices:', error));
-    });
+        // Dacă există un peer ID furnizat ca parametru, atunci ne alăturăm unei sesiuni existente
+        if (peerIdParam) {
+          console.log('Joining existing session with peer ID: ' + peerIdParam);
+          // Colegul ar trebui să inițieze un apel către ID-ul furnizat.
+          // Exemplu: peer.call(peerIdParam, stream);
+        } else {
+          console.log('Starting a new session');
+          // Altfel, inițiem o nouă sesiune.
+          navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then(stream => {
+              localVideo.srcObject = stream;
+              localAudio.srcObject = stream;
+              const invitationLink = window.location.origin + window.location.pathname + '?peer_id=' + id;
+              invitationLinkP.innerHTML = 'Invitați colegul să se alăture folosind link-ul: <a href="' + invitationLink + '">' + invitationLink + '</a>';
+            })
+            .catch(error => console.error('Error accessing media devices:', error));
+        }
+      });
+    }
+
+    // Apelați funcția startChat când se încarcă pagina
+    window.onload = startChat;
   </script>
 </body>
 </html>
