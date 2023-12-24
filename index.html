@@ -5,8 +5,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Video Chat</title>
-  <script src="https://cdn.jsdelivr.net/npm/peerjs@3.3.2/dist/peerjs.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@3.3.2/dist/peerjs.min.js"></script>
 </head>
 <body>
   <h1>Video Chat</h1>
@@ -23,6 +23,7 @@
 
   <script>
     const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+    const peerConnection = new RTCPeerConnection(configuration);
     let localStream;
     let localPeerId;
 
