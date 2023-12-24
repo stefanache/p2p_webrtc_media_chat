@@ -5,6 +5,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Video Chat</title>
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@0.6.0/dist/peerjs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
 </head>
 <body>
   <h1>Video Chat</h1>
@@ -12,11 +14,15 @@
   <audio id="localAudio" autoplay></audio>
   <video id="remoteVideo" autoplay playsinline></video>
   <audio id="remoteAudio" autoplay></audio>
+  <button onclick="joinChat()">Join</button>
+
   <script>
     const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
     const peerConnection = new RTCPeerConnection(configuration);
     let localStream;
+    let localPeerId;
 
+    // Adăugăm track-urile la conexiunea peer-to-peer
     navigator.mediaDevices.getUserMedia({ video: true, audio: true })
       .then(stream => {
         localStream = stream;
@@ -25,23 +31,60 @@
       })
       .catch(error => console.error('Eroare la accesarea dispozitivelor media:', error));
 
-    // Adăugăm track-urile la conexiunea peer-to-peer
-    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
     // Ascultăm pentru evenimentul de primire a stream-ului de la celălalt peer
     peerConnection.ontrack = event => {
       document.getElementById('remoteVideo').srcObject = event.streams[0];
       document.getElementById('remoteAudio').srcObject = event.streams[0];
     };
 
-    // Creăm și trimitem oferta către celălalt peer
-    peerConnection.createOffer()
-      .then(offer => peerConnection.setLocalDescription(offer))
-      .then(() => {
-        // Aici poți trimite oferta la celălalt peer, prin intermediul unui server de semnalizare sau altă metodă
-        console.log('Oferta:', peerConnection.localDescription);
-      })
-      .catch(error => console.error('Eroare la crearea ofertei:', error));
+    // Funcția pentru alăturarea la un chat existent sau crearea unei sesiuni noi
+    async function joinChat() {
+      // Solicitarea unui ID de la utilizator
+      const userInput = prompt('Introdu ID-ul PeerJS destinatar:');
+      const peerIdToJoin = userInput.trim();
+
+      if (peerIdToJoin === '') {
+        // Dacă utilizatorul nu a introdus un ID, creăm unul nou
+        localPeerId = await createPeer();
+        alert('ID-ul tău pentru a partaja este: ' + localPeerId);
+      } else {
+        // Dacă utilizatorul a introdus un ID, încercăm să ne alăturăm la sesiunea respectivă
+        localPeerId = peerIdToJoin;
+      }
+
+      // Conectarea la serverul de semnalizare
+      const socket = io('https://your-signaling-server.com');
+
+      // Ascultăm pentru evenimentul "connect" pentru a ne asigura că suntem conectați la server
+      socket.on('connect', () => {
+        // Transmiterea ofertei către celălalt peer
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+
+        socket.emit('offer', {
+          offer,
+          to: localPeerId, // Trimiterea ofertei către peer-ul specificat
+        });
+      });
+
+      // Ascultăm pentru evenimentul "answer" pentru a primi răspunsul de la celălalt peer
+      socket.on('answer', async answer => {
+        await peerConnection.setRemoteDescription(answer);
+      });
+
+      // Ascultăm pentru evenimentul "ice-candidate" pentru a primi candidații ICE de la celălalt peer
+      socket.on('ice-candidate', async candidate => {
+        await peerConnection.addIceCandidate(candidate);
+      });
+    }
+
+    // Funcția pentru crearea unui nou peer și obținerea ID-ului său
+    function createPeer() {
+      return new Promise(resolve => {
+        const peer = new Peer(); // Generează un ID aleatoriu
+        peer.on('open', id => resolve(id));
+      });
+    }
   </script>
 </body>
 </html>
