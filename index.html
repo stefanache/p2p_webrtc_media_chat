@@ -27,20 +27,11 @@
     let localStream;
     let localPeerId;
 
-    // Adăugăm track-urile la conexiunea peer-to-peer
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then(stream => {
-        localStream = stream;
-        document.getElementById('localVideo').srcObject = stream;
-        document.getElementById('localAudio').srcObject = stream;
-      })
-      .catch(error => console.error('Eroare la accesarea dispozitivelor media:', error));
-
-    // Ascultăm pentru evenimentul de primire a stream-ului de la celălalt peer
-    peerConnection.ontrack = event => {
-      document.getElementById('remoteVideo').srcObject = event.streams[0];
-      document.getElementById('remoteAudio').srcObject = event.streams[0];
-    };
+    // Funcția pentru obținerea parametrului "peer_id" din URL
+    function getPeerIdFromUrl() {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('peer_id');
+    }
 
     // Funcția pentru crearea unui nou peer și obținerea ID-ului său
     function createPeer() {
@@ -52,14 +43,20 @@
 
     // Funcția pentru generarea link-ului de invitație
     async function generateInvitationLink() {
+      // Obține peer_id din URL, dacă există
+      const peerIdFromUrl = getPeerIdFromUrl();
+
       // Crează un ID pentru utilizatorul local
-      localPeerId = await createPeer();
+      localPeerId = peerIdFromUrl || (await createPeer());
 
       // Afișează link-ul de invitație în elementul de ancoră (link)
       const invitationLink = window.location.origin + '/?peer_id=' + localPeerId;
       const anchorElement = document.getElementById('invitationLink');
       anchorElement.href = invitationLink;
       anchorElement.textContent = invitationLink;
+
+      // Adaugă peer_id la URL pentru a facilita partajarea link-ului
+      window.history.pushState({}, '', '?peer_id=' + localPeerId);
     }
 
     // Apelul funcției pentru generarea link-ului la încărcarea paginii
@@ -67,3 +64,4 @@
   </script>
 </body>
 </html>
+
