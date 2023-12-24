@@ -40,13 +40,13 @@
     // Funcția pentru alăturarea la un chat existent sau crearea unei sesiuni noi
     async function joinChat() {
       // Solicitarea unui ID de la utilizator
-      const userInput = prompt('Introdu ID-ul PeerJS destinatar:');
+      const userInput = prompt('Introdu ID-ul PeerJS destinatar (lasă gol pentru unul nou):');
       const peerIdToJoin = userInput.trim();
 
       if (peerIdToJoin === '') {
         // Dacă utilizatorul nu a introdus un ID, creăm unul nou
         localPeerId = await createPeer();
-        alert('ID-ul tău pentru a partaja este: ' + localPeerId);
+        alert('Link-ul tău de invitație este: ' + window.location.origin + '/?peer_id=' + localPeerId);
       } else {
         // Dacă utilizatorul a introdus un ID, încercăm să ne alăturăm la sesiunea respectivă
         localPeerId = peerIdToJoin;
