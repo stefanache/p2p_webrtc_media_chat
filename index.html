@@ -36,7 +36,7 @@
         peerIdSpan.textContent = id;
 
         // Dacă există un peer ID furnizat ca parametru, atunci ne alăturăm unei sesiuni existente
-        if (peerIdParam) {
+        if (peerIdParam && peerId !== peerIdParam) {
           console.log('Joining existing session with peer ID: ' + peerIdParam);
           // Colegul ar trebui să inițieze un apel către ID-ul furnizat.
           // Exemplu: peer.call(peerIdParam, stream);
@@ -47,8 +47,12 @@
             .then(stream => {
               localVideo.srcObject = stream;
               localAudio.srcObject = stream;
-              const invitationLink = window.location.origin + window.location.pathname + '?peer_id=' + id;
-              invitationLinkP.innerHTML = 'Invitați colegul să se alăture folosind link-ul: <a href="' + invitationLink + '">' + invitationLink + '</a>';
+
+              // Dacă suntem într-o sesiune existentă, nu afișăm link-ul de invitație
+              if (!peerIdParam) {
+                const invitationLink = window.location.origin + window.location.pathname + '?peer_id=' + id;
+                invitationLinkP.innerHTML = 'Invitați colegul să se alăture folosind link-ul: <a href="' + invitationLink + '">' + invitationLink + '</a>';
+              }
             })
             .catch(error => console.error('Error accessing media devices:', error));
         }
