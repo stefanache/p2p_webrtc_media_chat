@@ -79,6 +79,9 @@
       peer.on('open', (id) => {
         startChat(id);
       });
+
+      // Adăugați o captură pentru erori pentru a evita mesajul de eroare "Unchecked runtime.lastError"
+      chrome.runtime.lastError;
     });
   </script>
 </body>
