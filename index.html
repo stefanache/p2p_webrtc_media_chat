@@ -10,11 +10,15 @@
 <body>
   <h1>Video Chat</h1>
   <video id="localVideo" autoplay playsinline muted></video>
+  <audio id="localAudio" autoplay></audio>
   <video id="remoteVideo" autoplay playsinline></video>
+  <audio id="remoteAudio" autoplay></audio>
   <script>
     const peer = new Peer(); // Generează un ID aleatoriu
     const localVideo = document.getElementById('localVideo');
+    const localAudio = document.getElementById('localAudio');
     const remoteVideo = document.getElementById('remoteVideo');
+    const remoteAudio = document.getElementById('remoteAudio');
     let localStream;
     let peerConnection;
 
@@ -22,6 +26,7 @@
     navigator.mediaDevices.getUserMedia({ video: true, audio: true })
       .then(stream => {
         localVideo.srcObject = stream;
+        localAudio.srcObject = stream;
         localStream = stream;
 
         // Inițiază conexiunea când stream-ul local este disponibil
@@ -38,23 +43,34 @@
         peer.on('call', call => {
           // Răspunde apelului și adaugă stream-ul local
           call.answer(localStream);
-          call.on('stream', remoteStream => {
-            remoteVideo.srcObject = remoteStream;
-          });
+          handleCall(call);
+        });
+
+        // Ascultă pentru tastarea unei chei pentru a iniția un apel
+        document.addEventListener('keydown', event => {
+          if (event.key === 'c') {
+            // Apelează un alt peer și adaugă stream-ul local
+            const destPeerId = prompt('Introdu ID-ul PeerJS destinatar:');
+            const call = peer.call(destPeerId, localStream);
+            handleCall(call);
+          }
         });
       });
-
-      // Ascultă pentru tastarea unei chei pentru a iniția un apel
-      document.addEventListener('keydown', event => {
-        if (event.key === 'c') {
-          // Apelează un alt peer și adaugă stream-ul local
-          const call = peer.call(prompt('Introdu ID-ul PeerJS destinatar:'), localStream);
-          call.on('stream', remoteStream => {
-            remoteVideo.srcObject = remoteStream;
-          });
-        }
-      });
     }
+
+    function handleCall(call) {
+      call.on('stream', remoteStream => {
+        remoteVideo.srcObject = remoteStream;
+        remoteAudio.srcObject = remoteStream;
+      });
+      // Gestionarea evenimentelor pentru închiderea apelului, erori, etc., poate fi adăugată aici
+    }
+
+    // Verificare pentru erori în consolă
+    window.onerror = function(message, source, lineno, colno, error) {
+      console.error('Eroare în consolă:', message, source, lineno, colno, error);
+      return true; // Previne afișarea erorii în consolă browser-ului
+    };
   </script>
 </body>
 </html>
