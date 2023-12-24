@@ -5,87 +5,83 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Video Chat</title>
-  <link rel="icon" href="./favicon.ico" type="image/x-icon">
-  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.3.2/dist/peerjs.min.js"></script>
+  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
 </head>
 <body>
   <h1>Video Chat</h1>
-  <p>Peer ID: <span id="peerId"></span></p>
-  <p id="invitationLink"></p>
   <video id="localVideo" autoplay playsinline muted></video>
-  <audio id="localAudio" autoplay muted></audio>
   <video id="remoteVideo" autoplay playsinline></video>
-  <audio id="remoteAudio" autoplay></audio>
   <script>
     const localVideo = document.getElementById('localVideo');
-    const localAudio = document.getElementById('localAudio');
     const remoteVideo = document.getElementById('remoteVideo');
-    const remoteAudio = document.getElementById('remoteAudio');
-    const peerIdSpan = document.getElementById('peerId');
-    const invitationLinkP = document.getElementById('invitationLink');
-    let peer;
+    const socket = io('https://socket-io-chat-server.herokuapp.com/'); // Utilizați adresa serverului Socket.io
 
-    // Obțineți ID-ul din query string (ex: ?peer_id=123)
-    const urlParams = new URLSearchParams(window.location.search);
-    const peerIdParam = urlParams.get('peer_id');
+    let localStream;
+    let peerConnection;
 
-    function startChat(id) {
-      peerIdSpan.textContent = id;
+    // Obțineți acces la camera web și microfon
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then(stream => {
+        localVideo.srcObject = stream;
+        localStream = stream;
 
-      // Dacă există un peer ID furnizat ca parametru, atunci ne alăturăm unei sesiuni existente
-      if (peerIdParam && id !== peerIdParam) {
-        console.log('Joining existing session with peer ID: ' + peerIdParam);
+        // Apelați funcția de inițiere a conexiunii când stream-ul local este disponibil
+        initConnection();
+      })
+      .catch(error => console.error('Eroare la accesarea dispozitivelor media:', error));
 
-        // Verificați dacă există o conexiune către peer-ul specificat
-        if (peer.connections[peerIdParam] && peer.connections[peerIdParam].length > 0) {
-          // Inițiați un apel către peer-ul local
-          const call = peer.call(peerIdParam, null);
+    function initConnection() {
+      // Configurarea conexiunii peer-to-peer folosind WebRTC
+      peerConnection = new RTCPeerConnection();
 
-          // Verificați dacă apelul este definit înainte de a adăuga un handler pentru evenimentul 'stream'
-          if (call) {
-            // Răspundeți la evenimentul 'stream' pentru a afișa stream-ul remote
-            call.on('stream', (remoteStream) => {
-              remoteVideo.srcObject = remoteStream;
-              remoteAudio.srcObject = remoteStream;
-            });
-          } else {
-            console.error('Call is not defined.');
-          }
-        } else {
-          console.error('No existing connection to the specified peer ID.');
+      // Adăugarea stream-ului local la conexiune
+      localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+      // Tratarea evenimentelor pentru manipularea stream-ului remote
+      peerConnection.ontrack = event => {
+        remoteVideo.srcObject = event.streams[0];
+      };
+
+      // Crearea și trimiterea ofertei către server
+      peerConnection.createOffer()
+        .then(offer => peerConnection.setLocalDescription(offer))
+        .then(() => {
+          // Trimiteți oferta către server
+          socket.emit('offer', peerConnection.localDescription);
+        })
+        .catch(error => console.error('Eroare la crearea ofertei:', error));
+
+      // Ascultați pentru oferte noi de la server
+      socket.on('offer', offer => {
+        // Dacă oferta nu este de la acest browser, procesați-o
+        if (!offer.sdp.includes(peerConnection.localDescription.sdp)) {
+          // Setarea ofertei primite și trimiterea unui răspuns
+          peerConnection.setRemoteDescription(offer)
+            .then(() => peerConnection.createAnswer())
+            .then(answer => peerConnection.setLocalDescription(answer))
+            .then(() => {
+              // Trimiteți răspunsul către server
+              socket.emit('answer', peerConnection.localDescription);
+            })
+            .catch(error => console.error('Eroare la crearea răspunsului:', error));
         }
-      } else {
-        console.log('Starting a new session');
-        // Altfel, inițiem o nouă sesiune.
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-          .then(stream => {
-            localVideo.srcObject = stream;
-            localAudio.srcObject = stream;
-
-            // Dacă suntem într-o sesiune existentă, nu afișăm link-ul de invitație
-            if (!peerIdParam) {
-              const invitationLink = window.location.origin + window.location.pathname + '?peer_id=' + id;
-              invitationLinkP.innerHTML = 'Invitați colegul să se alăture folosind link-ul: <a href="' + invitationLink + '">' + invitationLink + '</a>';
-            }
-          })
-          .catch(error => console.error('Error accessing media devices:', error));
-      }
-    }
-
-    // Inițializați obiectul Peer când documentul este complet încărcat
-    document.addEventListener('DOMContentLoaded', () => {
-      peer = new Peer();
-
-      // Ascultați evenimentul 'open' pentru a obține ID-ul peer-ului local
-      peer.on('open', (id) => {
-        startChat(id);
       });
 
-      // Adăugați o verificare pentru existența 'chrome' înainte de accesarea 'chrome.runtime.lastError'
-      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.lastError) {
-        console.error('Chrome runtime error:', chrome.runtime.lastError);
-      }
-    });
+      // Ascultați pentru răspunsuri noi de la server
+      socket.on('answer', answer => {
+        // Dacă răspunsul nu este de la acest browser, procesați-l
+        if (!answer.sdp.includes(peerConnection.localDescription.sdp)) {
+          peerConnection.setRemoteDescription(answer)
+            .catch(error => console.error('Eroare la setarea descrierii remote:', error));
+        }
+      });
+
+      // Ascultați pentru candidați noi de la server
+      socket.on('candidate', candidate => {
+        peerConnection.addIceCandidate(candidate)
+          .catch(error => console.error('Eroare la adăugarea candidatului ICE:', error));
+      });
+    }
   </script>
 </body>
 </html>
