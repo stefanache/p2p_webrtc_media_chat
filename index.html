@@ -5,8 +5,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Video Chat</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/peerjs@3.3.2/dist/peerjs.min.js"></script>
 </head>
 <body>
   <h1>Video Chat</h1>
@@ -14,7 +12,7 @@
   <audio id="localAudio" autoplay></audio>
   <video id="remoteVideo" autoplay playsinline></video>
   <audio id="remoteAudio" autoplay></audio>
-  
+
   <!-- Element pentru afișarea link-ului de invitație -->
   <div id="invitationLinkContainer">
     <p>Link-ul tău de invitație este:</p>
@@ -22,54 +20,61 @@
   </div>
 
   <script>
-    const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-    const peerConnection = new RTCPeerConnection(configuration);
     let localStream;
+    let peerConnection;
     let localPeerId;
 
-    // Funcția pentru obținerea parametrului "peer_id" din URL
+    async function initialize() {
+      const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        document.getElementById('localVideo').srcObject = localStream;
+        document.getElementById('localAudio').srcObject = localStream;
+
+        const peerIdFromUrl = getPeerIdFromUrl();
+        localPeerId = peerIdFromUrl || generateRandomId();
+
+        createInvitationLink(localPeerId);
+
+        peerConnection = new RTCPeerConnection(configuration);
+
+        // Adăugarea stream-ului local la conexiune
+        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+        // Ascultarea pentru evenimentul de sosire a stream-ului remote
+        peerConnection.ontrack = event => {
+          document.getElementById('remoteVideo').srcObject = event.streams[0];
+          document.getElementById('remoteAudio').srcObject = event.streams[0];
+        };
+
+        // Crearea și trimiterea ofertei către celălalt vârf
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+      } catch (error) {
+        console.error('Error accessing media devices:', error);
+      }
+    }
+
     function getPeerIdFromUrl() {
       const urlParams = new URLSearchParams(window.location.search);
       return urlParams.get('peer_id');
     }
 
-    // Funcția pentru crearea unui nou peer și obținerea ID-ului său
-    function createPeer() {
-      return new Promise(resolve => {
-        const peer = new Peer(); // Generează un ID aleatoriu
-        peer.on('open', id => resolve(id));
-      });
+    function generateRandomId() {
+      return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     }
 
-    // Funcția pentru generarea link-ului de invitație
-    async function generateInvitationLink() {
-      // Obține peer_id din URL, dacă există
-      const peerIdFromUrl = getPeerIdFromUrl();
-
-      // Crează un ID pentru utilizatorul local
-      localPeerId = peerIdFromUrl || (await createPeer());
-
-      // Afișează link-ul de invitație în elementul de ancoră (link)
-      const invitationLink = window.location.origin + '/?peer_id=' + localPeerId;
+    function createInvitationLink(peerId) {
+      const invitationLink = window.location.origin + '/?peer_id=' + peerId;
       const anchorElement = document.getElementById('invitationLink');
       anchorElement.href = invitationLink;
       anchorElement.textContent = invitationLink;
 
-      // Adaugă peer_id la URL pentru a facilita partajarea link-ului
-      window.history.pushState({}, '', '?peer_id=' + localPeerId);
+      window.history.pushState({}, '', '?peer_id=' + peerId);
     }
 
-    // Apelul funcției pentru generarea link-ului la încărcarea paginii
-    generateInvitationLink();
-
-    // Obține peer_id din URL
-    const peerIdFromUrl = getPeerIdFromUrl();
-
-    // Dacă avem un peer_id în URL, putem trata logic acest caz
-    if (peerIdFromUrl) {
-      // Acum puteți utiliza peerIdFromUrl pentru a vă alătura unei sesiuni existente sau face alte lucruri
-      console.log('Sesiune existentă, peer_id:', peerIdFromUrl);
-    }
+    initialize();
   </script>
 </body>
 </html>
