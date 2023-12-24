@@ -10,73 +10,70 @@
 <body>
   <h1>Video Chat</h1>
   <video id="localVideo" autoplay playsinline muted></video>
+  <audio id="localAudio" autoplay muted></audio>
   <video id="remoteVideo" autoplay playsinline></video>
+  <audio id="remoteAudio" autoplay></audio>
   <script>
     const localVideo = document.getElementById('localVideo');
+    const localAudio = document.getElementById('localAudio');
     const remoteVideo = document.getElementById('remoteVideo');
-    const socket = io('https://socket-io-chat-server.herokuapp.com/'); // Utilizați adresa serverului Socket.io
+    const remoteAudio = document.getElementById('remoteAudio');
+    const socket = io('https://socket-io-chat-server.herokuapp.com/');
 
     let localStream;
     let peerConnection;
 
-    // Obțineți acces la camera web și microfon
     navigator.mediaDevices.getUserMedia({ video: true, audio: true })
       .then(stream => {
         localVideo.srcObject = stream;
+        localAudio.srcObject = stream;
         localStream = stream;
       })
       .catch(error => console.error('Error accessing media devices:', error));
 
-    // Apelați funcția de inițiere a conexiunii când stream-ul local este disponibil
     initConnection();
 
     function initConnection() {
-      // Configurarea conexiunii peer-to-peer folosind WebRTC
       peerConnection = new RTCPeerConnection();
 
-      // Adăugarea stream-ului local la conexiune
       localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-      // Tratarea evenimentelor pentru manipularea stream-ului remote
       peerConnection.ontrack = event => {
-        remoteVideo.srcObject = event.streams[0];
+        const [videoTrack, audioTrack] = event.streams[0].getTracks();
+        if (videoTrack) {
+          remoteVideo.srcObject = new MediaStream([videoTrack]);
+        }
+        if (audioTrack) {
+          remoteAudio.srcObject = new MediaStream([audioTrack]);
+        }
       };
 
-      // Crearea și trimiterea ofertei către server
       peerConnection.createOffer()
         .then(offer => peerConnection.setLocalDescription(offer))
         .then(() => {
-          // Trimiteți oferta către server
           socket.emit('offer', peerConnection.localDescription);
         })
         .catch(error => console.error('Error creating offer:', error));
 
-      // Ascultați pentru oferte noi de la server
       socket.on('offer', offer => {
-        // Dacă oferta nu este de la acest browser, procesați-o
         if (!offer.sdp.includes(peerConnection.localDescription.sdp)) {
-          // Setarea ofertei primite și trimiterea unui răspuns
           peerConnection.setRemoteDescription(offer)
             .then(() => peerConnection.createAnswer())
             .then(answer => peerConnection.setLocalDescription(answer))
             .then(() => {
-              // Trimiteți răspunsul către server
               socket.emit('answer', peerConnection.localDescription);
             })
             .catch(error => console.error('Error creating answer:', error));
         }
       });
 
-      // Ascultați pentru răspunsuri noi de la server
       socket.on('answer', answer => {
-        // Dacă răspunsul nu este de la acest browser, procesați-l
         if (!answer.sdp.includes(peerConnection.localDescription.sdp)) {
           peerConnection.setRemoteDescription(answer)
             .catch(error => console.error('Error setting remote description:', error));
         }
       });
 
-      // Ascultați pentru candidați noi de la server
       socket.on('candidate', candidate => {
         peerConnection.addIceCandidate(candidate)
           .catch(error => console.error('Error adding ice candidate:', error));
