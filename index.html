@@ -12,9 +12,11 @@
   <video id="localVideo" autoplay playsinline muted></video>
   <video id="remoteVideo" autoplay playsinline></video>
   <script>
+    // Modifică adresa URL a serverului de chat în scriptul tău pentru a trece prin CORS Anywhere
+    const socket = io('https://cors-anywhere.herokuapp.com/https://socket-io-chat-server.herokuapp.com/');
+
     const localVideo = document.getElementById('localVideo');
     const remoteVideo = document.getElementById('remoteVideo');
-    const socket = io('https://socket-io-chat-server.herokuapp.com/'); // Utilizați adresa serverului Socket.io
 
     let localStream;
     let peerConnection;
